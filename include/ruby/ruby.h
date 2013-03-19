@@ -1599,6 +1599,12 @@ int ruby_native_thread_p(void);
 #define RUBY_EVENT_SWITCH         0x20000
 #define RUBY_EVENT_COVERAGE       0x40000
 
+/* GC events (c-api only) */
+#define RUBY_EVENT_OBJ_NEW  0x100000
+#define RUBY_EVENT_OBJ_MARK 0x200000
+#define RUBY_EVENT_OBJ_FREE 0x400000
+#define RUBY_EVENT_OBJ_ALL  0xF00000
+
 typedef unsigned long rb_event_flag_t;
 typedef void (*rb_event_hook_func_t)(rb_event_flag_t evflag, VALUE data, VALUE self, ID mid, VALUE klass);
 

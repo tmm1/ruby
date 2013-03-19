@@ -556,6 +556,9 @@ get_event_id(rb_event_flag_t event)
 	C(thread_begin, THREAD_BEGIN);
 	C(thread_end, THREAD_END);
 	C(specified_line, SPECIFIED_LINE);
+	C(obj_new, OBJ_NEW);
+	C(obj_mark, OBJ_MARK);
+	C(obj_free, OBJ_FREE);
       case RUBY_EVENT_LINE | RUBY_EVENT_SPECIFIED_LINE: CONST_ID(id, "line"); return id;
 #undef C
       default:
@@ -802,6 +805,21 @@ VALUE
 rb_tracearg_raised_exception(rb_trace_arg_t *trace_arg)
 {
     if (trace_arg->event & (RUBY_EVENT_RAISE)) {
+	/* ok */
+    }
+    else {
+	rb_raise(rb_eRuntimeError, "not supported by this event");
+    }
+    if (trace_arg->data == Qundef) {
+	rb_bug("tp_attr_raised_exception_m: unreachable");
+    }
+    return trace_arg->data;
+}
+
+VALUE
+rb_tracearg_object(rb_trace_arg_t *trace_arg)
+{
+    if (trace_arg->event & (RUBY_EVENT_OBJ_ALL)) {
 	/* ok */
     }
     else {

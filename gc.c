@@ -687,9 +687,11 @@ VALUE
 rb_newobj_of(VALUE klass, VALUE flags)
 {
     VALUE obj;
+    rb_thread_t *th = GET_THREAD();
 
     obj = newobj(klass, flags);
     OBJSETUP(obj, klass, flags);
+    EXEC_EVENT_HOOK(th, RUBY_EVENT_OBJ_NEW, th->self, 0, 0, obj);
 
     return obj;
 }
@@ -907,6 +909,7 @@ make_io_deferred(RVALUE *p)
 static int
 obj_free(rb_objspace_t *objspace, VALUE obj)
 {
+    rb_thread_t *th = GET_THREAD();
     switch (BUILTIN_TYPE(obj)) {
       case T_NIL:
       case T_FIXNUM:
@@ -915,6 +918,8 @@ obj_free(rb_objspace_t *objspace, VALUE obj)
 	rb_bug("obj_free() called for broken object");
 	break;
     }
+
+    EXEC_EVENT_HOOK(th, RUBY_EVENT_OBJ_FREE, th->self, 0, 0, obj);
 
     if (FL_TEST(obj, FL_EXIVAR)) {
 	rb_free_generic_ivar((VALUE)obj);
@@ -2559,8 +2564,10 @@ static int
 gc_mark_ptr(rb_objspace_t *objspace, VALUE ptr)
 {
     register uintptr_t *bits = GET_HEAP_BITMAP(ptr);
+    rb_thread_t *th = GET_THREAD();
     if (MARKED_IN_BITMAP(bits, ptr)) return 0;
     MARK_IN_BITMAP(bits, ptr);
+    EXEC_EVENT_HOOK(th, RUBY_EVENT_OBJ_MARK, th->self, 0, 0, ptr);
     objspace->heap.marked_num++;
     return 1;
 }

@@ -67,6 +67,7 @@ VALUE rb_tracearg_binding(rb_trace_arg_t *trace_arg);
 VALUE rb_tracearg_self(rb_trace_arg_t *trace_arg);
 VALUE rb_tracearg_return_value(rb_trace_arg_t *trace_arg);
 VALUE rb_tracearg_raised_exception(rb_trace_arg_t *trace_arg);
+VALUE rb_tracearg_object(rb_trace_arg_t *trace_arg);
 
 /* undocumented advanced tracing APIs */
 
