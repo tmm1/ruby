@@ -917,9 +917,6 @@ enum {
 #define RUBY_VM_INTERRUPTED(th) ((th)->interrupt_flag & ~(th)->interrupt_mask & (PENDING_INTERRUPT_MASK|TRAP_INTERRUPT_MASK))
 #define RUBY_VM_INTERRUPTED_ANY(th) ((th)->interrupt_flag & ~(th)->interrupt_mask)
 
-void rb_task_run_deferred(void);
-void rb_task_enqueue(void (*)(void *), void *);
-
 int rb_signal_buff_size(void);
 void rb_signal_exec(rb_thread_t *th, int sig);
 void rb_threadptr_check_signal(rb_thread_t *mth);

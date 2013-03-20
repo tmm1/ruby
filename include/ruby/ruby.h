@@ -1606,6 +1606,10 @@ typedef void (*rb_event_hook_func_t)(rb_event_flag_t evflag, VALUE data, VALUE s
 void rb_add_event_hook(rb_event_hook_func_t func, rb_event_flag_t events, VALUE data);
 int rb_remove_event_hook(rb_event_hook_func_t func);
 
+typedef void (*rb_task_func_t)(void *arg);
+void rb_task_run_deferred(void);
+void rb_task_enqueue(rb_task_func_t, void *);
+
 /* locale insensitive functions */
 
 #define rb_isascii(c) ((unsigned long)(c) < 128)

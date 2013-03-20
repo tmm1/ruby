@@ -10,8 +10,6 @@
 #include "internal.h"
 #include "vm_core.h"
 
-typedef void (*rb_task_func_t)(void *arg);
-
 typedef struct rb_task_job_struct {
     rb_task_func_t func;
     void *data;
