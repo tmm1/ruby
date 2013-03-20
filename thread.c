@@ -1882,7 +1882,7 @@ rb_threadptr_execute_interrupts(rb_thread_t *th, int blocking_timing)
 	int sig;
 	int timer_interrupt;
 	int pending_interrupt;
-	int finalizer_interrupt;
+	int task_interrupt;
 	int trap_interrupt;
 
 	do {
@@ -1896,7 +1896,7 @@ rb_threadptr_execute_interrupts(rb_thread_t *th, int blocking_timing)
 
 	timer_interrupt = interrupt & TIMER_INTERRUPT_MASK;
 	pending_interrupt = interrupt & PENDING_INTERRUPT_MASK;
-	finalizer_interrupt = interrupt & FINALIZER_INTERRUPT_MASK;
+	task_interrupt = interrupt & TASK_INTERRUPT_MASK;
 	trap_interrupt = interrupt & TRAP_INTERRUPT_MASK;
 
 	/* signal handling */
@@ -1931,7 +1931,7 @@ rb_threadptr_execute_interrupts(rb_thread_t *th, int blocking_timing)
 	    }
 	}
 
-	if (finalizer_interrupt) {
+	if (task_interrupt) {
 	    rb_gc_finalize_deferred();
 	}
 

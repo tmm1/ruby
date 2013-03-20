@@ -906,13 +906,13 @@ GET_THREAD(void)
 enum {
     TIMER_INTERRUPT_MASK	 = 0x01,
     PENDING_INTERRUPT_MASK = 0x02,
-    FINALIZER_INTERRUPT_MASK     = 0x04,
+    TASK_INTERRUPT_MASK  = 0x04,
     TRAP_INTERRUPT_MASK		 = 0x08
 };
 
 #define RUBY_VM_SET_TIMER_INTERRUPT(th)		ATOMIC_OR((th)->interrupt_flag, TIMER_INTERRUPT_MASK)
 #define RUBY_VM_SET_INTERRUPT(th)		ATOMIC_OR((th)->interrupt_flag, PENDING_INTERRUPT_MASK)
-#define RUBY_VM_SET_FINALIZER_INTERRUPT(th)	ATOMIC_OR((th)->interrupt_flag, FINALIZER_INTERRUPT_MASK)
+#define RUBY_VM_SET_TASK_INTERRUPT(th)		ATOMIC_OR((th)->interrupt_flag, TASK_INTERRUPT_MASK)
 #define RUBY_VM_SET_TRAP_INTERRUPT(th)		ATOMIC_OR((th)->interrupt_flag, TRAP_INTERRUPT_MASK)
 #define RUBY_VM_INTERRUPTED(th) ((th)->interrupt_flag & ~(th)->interrupt_mask & (PENDING_INTERRUPT_MASK|TRAP_INTERRUPT_MASK))
 #define RUBY_VM_INTERRUPTED_ANY(th) ((th)->interrupt_flag & ~(th)->interrupt_mask)

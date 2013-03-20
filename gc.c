@@ -1946,7 +1946,7 @@ slot_sweep(rb_objspace_t *objspace, struct heaps_slot *sweep_slot)
     if (deferred_final_list && !finalizing) {
         rb_thread_t *th = GET_THREAD();
         if (th) {
-            RUBY_VM_SET_FINALIZER_INTERRUPT(th);
+            RUBY_VM_SET_TASK_INTERRUPT(th);
         }
     }
 }
