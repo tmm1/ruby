@@ -1932,7 +1932,7 @@ rb_threadptr_execute_interrupts(rb_thread_t *th, int blocking_timing)
 	}
 
 	if (task_interrupt) {
-	    rb_gc_finalize_deferred();
+	    rb_task_run_deferred();
 	}
 
 	if (timer_interrupt) {

@@ -91,6 +91,7 @@ COMMONOBJS    = array.$(OBJEXT) \
 		vm_dump.$(OBJEXT) \
 		vm_backtrace.$(OBJEXT) \
 		vm_trace.$(OBJEXT) \
+		vm_task.$(OBJEXT) \
 		thread.$(OBJEXT) \
 		cont.$(OBJEXT) \
 		$(BUILTIN_ENCOBJS) \
@@ -791,6 +792,8 @@ vm_backtrace.$(OBJEXT): {$(VPATH)}vm_backtrace.c \
 vm_trace.$(OBJEXT): {$(VPATH)}vm_trace.c $(ENCODING_H_INCLUDES) \
   $(VM_CORE_H_INCLUDES) $(RUBY_H_INCLUDES) {$(VPATH)}debug.h \
   {$(VPATH)}internal.h
+vm_task.$(OBJEXT): {$(VPATH)}vm_task.c $(ENCODING_H_INCLUDES) \
+  $(VM_CORE_H_INCLUDES) $(RUBY_H_INCLUDES) {$(VPATH)}internal.h
 miniprelude.$(OBJEXT): {$(VPATH)}miniprelude.c $(RUBY_H_INCLUDES) \
   $(VM_CORE_H_INCLUDES) {$(VPATH)}internal.h
 prelude.$(OBJEXT): {$(VPATH)}prelude.c $(RUBY_H_INCLUDES) \
