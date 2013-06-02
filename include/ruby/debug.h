@@ -35,6 +35,11 @@ VALUE rb_debug_inspector_frame_binding_get(const rb_debug_inspector_t *dc, long 
 VALUE rb_debug_inspector_frame_iseq_get(const rb_debug_inspector_t *dc, long index);
 VALUE rb_debug_inspector_backtrace_locations(const rb_debug_inspector_t *dc);
 
+/* callstack API */
+VALUE rb_callstack_iseq_current(void);
+typedef VALUE (*rb_callstack_iterator_t)(VALUE iseq, int line, void *data);
+void rb_callstack_iseq_each(rb_callstack_iterator_t func, void *data);
+
 /* Old style set_trace_func APIs */
 
 /* duplicated def of include/ruby/ruby.h */
