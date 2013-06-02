@@ -954,6 +954,32 @@ iseq_first_lineno(VALUE self)
     return iseq->location.first_lineno;
 }
 
+static VALUE
+iseq_class_path(VALUE self)
+{
+    VALUE klass, path;
+    int singleton = 0;
+    rb_iseq_t *iseq;
+
+    GetISeqPtr(self, iseq);
+    klass = iseq->klass;
+
+    if (!RTEST(klass) || klass == rb_cObject)
+	return Qnil;
+
+    if (RB_TYPE_P(klass, T_ICLASS)) {
+	klass = RBASIC(klass)->klass;
+    }
+    if (FL_TEST(klass, FL_SINGLETON)) {
+	singleton = 1;
+	klass = rb_ivar_get(klass, id__attached__);
+    }
+
+    path = rb_class_path(klass);
+    if (!NIL_P(path)) rb_str_concat(path, INT2FIX(singleton ? '.' : '#'));
+    return path;
+}
+
 static
 VALUE iseq_data_to_ary(rb_iseq_t *iseq);
 
@@ -2265,6 +2291,7 @@ Init_ISeq(void)
     rb_define_method(rb_cISeq, "label", iseq_label, 0);
     rb_define_method(rb_cISeq, "base_label", iseq_base_label, 0);
     rb_define_method(rb_cISeq, "first_lineno", iseq_first_lineno, 0);
+    rb_define_method(rb_cISeq, "class_path", iseq_class_path, 0);
 
 #if 0
     /* Now, it is experimental. No discussions, no tests. */
