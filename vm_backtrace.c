@@ -474,6 +474,54 @@ backtrace_each(rb_thread_t *th,
     }
 }
 
+void
+rb_callstack_iseq_each(rb_callstack_iterator_t func, void *data)
+{
+    rb_thread_t *th = GET_THREAD();
+    rb_control_frame_t *last_cfp = th->cfp;
+    rb_control_frame_t *start_cfp = RUBY_VM_END_CONTROL_FRAME(th);
+    rb_control_frame_t *cfp;
+    ptrdiff_t size, i;
+    VALUE ret;
+
+    start_cfp =
+      RUBY_VM_NEXT_CONTROL_FRAME(
+	  RUBY_VM_NEXT_CONTROL_FRAME(start_cfp)); /* skip top frames */
+
+    if (start_cfp < last_cfp) {
+	size = 0;
+    }
+    else {
+	size = start_cfp - last_cfp + 1;
+    }
+
+    for (i=0, cfp = last_cfp; i<size; i++, cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp)) {
+	if (cfp->iseq) {
+	    if (cfp->pc) {
+		ret = func(cfp->iseq->self, calc_lineno(cfp->iseq, cfp->pc), data);
+		if (ret == Qfalse)
+		    break;
+	    }
+	}
+    }
+}
+
+static VALUE
+iseq_first(VALUE iseq, int line, void *data)
+{
+    VALUE *iseq_ptr = data;
+    *iseq_ptr = iseq;
+    return Qfalse;
+}
+
+VALUE
+rb_callstack_iseq_current(void)
+{
+    VALUE iseq = Qnil;
+    rb_callstack_iseq_each(iseq_first, &iseq);
+    return iseq;
+}
+
 struct bt_iter_arg {
     rb_backtrace_t *bt;
     VALUE btobj;
