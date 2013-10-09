@@ -46,6 +46,27 @@ class ProfileResult
       printf "% 10d % 8s  % 10d % 8s     %s\n", total, "(%2.1f%%)" % (total*100.0/overall_samples), call, "(%2.1f%%)" % (call*100.0/overall_samples), info[:name]
     end
   end
+
+  def print_method(name)
+    name = /#{Regexp.escape name}/ unless Regexp === name
+    frames.each do |frame, info|
+      next unless info[:name] =~ name
+      printf "%s (%s)\n", info[:name], info[:location]
+
+      file, line = info[:location].split(':')
+      line = line.to_i - 1
+      maxline = info[:lines] ? info[:lines].keys.max : line + 5
+
+      source = File.readlines(file).each_with_index do |code, i|
+        next unless (line..maxline).include?(i)
+        if samples = info[:lines][i+1]
+          printf "% 5d % 7s / % 7s  | % 5d  | %s", samples, "(%2.1f%%" % (100.0*samples/overall_samples), "%2.1f%%)" % (100.0*samples/info[:samples]), i+1, code
+        else
+          printf "                         | % 5d  | %s", i+1, code
+        end
+      end
+    end
+  end
 end
 
 class A
@@ -78,6 +99,9 @@ profile = FrameProfiler.run(1000) do
 end
 
 result = ProfileResult.new(profile)
+puts
+result.print_method(/pow|newobj/)
+puts
 result.print_text
 puts
 result.print_graphviz
@@ -87,6 +111,17 @@ result.print_debug
 __END__
 
 tmm1@tmm1-air ~/code/ruby-gitsvn (trunk*) $ ./ruby -I .ext/x86_64-darwin12.4.1/:lib:. ext/frameprofiler/sample.rb
+
+A#pow (/Users/tmm1/code/ruby-gitsvn/ext/frameprofiler/sample.rb:79)
+                         |    79  |   def pow
+  194  (44.7% / 100.0%)  |    80  |     2 ** 100
+                         |    81  |   end
+A.newobj (/Users/tmm1/code/ruby-gitsvn/ext/frameprofiler/sample.rb:83)
+                         |    83  |   def self.newobj
+   54  (12.4% /  50.9%)  |    84  |     Object.new
+   52  (12.0% /  49.1%)  |    85  |     Object.new
+                         |    86  |   end
+
      TOTAL    (pct)      CALLER    (pct)     ISEQ
        361  (47.9%)         361  (47.9%)     A#pow
        203  (26.9%)         203  (26.9%)     A.newobj
