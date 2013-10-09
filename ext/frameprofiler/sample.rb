@@ -92,8 +92,10 @@ class A
   end
 end
 
-profile = FrameProfiler.run(1000) do
-  1000000.times do
+#profile = FrameProfiler.run(:object, 1) do
+#profile = FrameProfiler.run(:wall, 1000) do
+profile = FrameProfiler.run(:cpu, 1000) do
+  1_000_000.times do
     A.new
   end
 end

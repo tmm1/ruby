@@ -28,22 +28,50 @@ typedef struct {
 } frame_data_t;
 
 static struct {
+    enum {
+	PROF_NONE = 0,
+	PROF_CPU,
+	PROF_WALL,
+	PROF_OBJECT
+    } type;
+
     size_t overall_samples;
     st_table *frames;
 
     VALUE frames_buffer[BUF_SIZE];
     int lines_buffer[BUF_SIZE];
 } _results;
-static VALUE profiler_proc;
+
+static VALUE objtracer;
+
+static void frameprofiler_newobj_handler(VALUE, void*);
+static void frameprofiler_signal_handler(int sig, siginfo_t* sinfo, void* ucontext);
 
 static VALUE
-frameprofiler_start(VALUE self, VALUE usec)
+frameprofiler_start(VALUE self, VALUE type, VALUE usec)
 {
-    struct itimerval timer;
-    timer.it_interval.tv_sec = 0;
-    timer.it_interval.tv_usec = NUM2LONG(usec);
-    timer.it_value = timer.it_interval;
-    setitimer(ITIMER_PROF, &timer, 0);
+    if (type == ID2SYM(rb_intern("object"))) {
+	_results.type = PROF_OBJECT;
+	objtracer = rb_tracepoint_new(0, RUBY_INTERNAL_EVENT_NEWOBJ, frameprofiler_newobj_handler, 0);
+	rb_tracepoint_enable(objtracer);
+    } else {
+	if (type == ID2SYM(rb_intern("wall")))
+	    _results.type = PROF_WALL;
+	else
+	    _results.type = PROF_CPU;
+
+	struct sigaction sa;
+	sa.sa_sigaction = frameprofiler_signal_handler;
+	sa.sa_flags = SA_RESTART | SA_SIGINFO;
+	sigemptyset(&sa.sa_mask);
+	sigaction(_results.type == PROF_WALL ? SIGALRM : SIGPROF, &sa, NULL);
+
+	struct itimerval timer;
+	timer.it_interval.tv_sec = 0;
+	timer.it_interval.tv_usec = NUM2LONG(usec);
+	timer.it_value = timer.it_interval;
+	setitimer(_results.type == PROF_WALL ? ITIMER_REAL : ITIMER_PROF, &timer, 0);
+    }
 
     return Qnil;
 }
@@ -51,9 +79,19 @@ frameprofiler_start(VALUE self, VALUE usec)
 static VALUE
 frameprofiler_stop(VALUE self)
 {
-    struct itimerval timer;
-    memset(&timer, 0, sizeof(timer));
-    setitimer(ITIMER_PROF, &timer, 0);
+    if (_results.type == PROF_OBJECT) {
+	rb_tracepoint_disable(objtracer);
+    } else {
+	struct itimerval timer;
+	memset(&timer, 0, sizeof(timer));
+	setitimer(_results.type == PROF_WALL ? ITIMER_REAL : ITIMER_PROF, &timer, 0);
+
+	struct sigaction sa;
+	sa.sa_handler = SIG_IGN;
+	sa.sa_flags = SA_RESTART;
+	sigemptyset(&sa.sa_mask);
+	sigaction(_results.type == PROF_WALL ? SIGALRM : SIGPROF, &sa, NULL);
+    }
 
     return Qnil;
 }
@@ -125,13 +163,15 @@ frame_i(st_data_t key, st_data_t val, st_data_t arg)
 }
 
 static VALUE
-frameprofiler_run(VALUE self, VALUE usec)
+frameprofiler_run(VALUE self, VALUE type, VALUE usec)
 {
     VALUE results, frames;
     rb_need_block();
+    if (!_results.frames)
+	_results.frames = st_init_numtable();
     _results.overall_samples = 0;
 
-    frameprofiler_start(self, usec);
+    frameprofiler_start(self, type, usec);
     rb_yield(Qundef);
     frameprofiler_stop(self);
 
@@ -208,36 +248,32 @@ frameprofiler_sample()
     }
 }
 
-static VALUE
-frameprofiler_signal_handler(VALUE arg, VALUE ctx)
+static void
+frameprofiler_job_handler(void *data)
 {
     static int in_signal_handler = 0;
-    if (in_signal_handler) return Qnil;
+    if (in_signal_handler) return;
 
     in_signal_handler++;
     frameprofiler_sample();
     in_signal_handler--;
+}
 
-    return Qnil;
+static void
+frameprofiler_signal_handler(int sig, siginfo_t *sinfo, void *ucontext)
+{
+    rb_postponed_job_register_one(0, frameprofiler_job_handler, 0);
+}
+
+static void
+frameprofiler_newobj_handler(VALUE tpval, void *data)
+{
+    frameprofiler_job_handler(0);
 }
 
 void
 Init_frameprofiler(void)
 {
     VALUE rb_mFrameProfiler = rb_define_module("FrameProfiler");
-    rb_define_singleton_method(rb_mFrameProfiler, "run", frameprofiler_run, 1);
-
-    /* signal handlers in C could fire during method dispatch, gc, etc.
-     * we use a ruby signal handler to ensure consistent VM state
-     * during callstack samples.
-     *
-     * TODO: use postponed_job api from real signal handler?
-     */
-    profiler_proc = rb_proc_new(frameprofiler_signal_handler, Qnil);
-    rb_global_variable(&profiler_proc);
-    rb_funcall(Qnil, rb_intern("trap"), 2, rb_str_new_cstr("PROF"), profiler_proc);
-
-    /* TODO: remove global
-     */
-    _results.frames = st_init_numtable();
+    rb_define_singleton_method(rb_mFrameProfiler, "run", frameprofiler_run, 2);
 }
