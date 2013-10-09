@@ -87,7 +87,7 @@ frame_i(st_data_t key, st_data_t val, st_data_t arg)
     VALUE details = rb_hash_new();
     VALUE name, location, edges, lines;
     VALUE label, method_name;
-    int line;
+    VALUE line;
 
     rb_hash_aset(results, rb_obj_id(frame), details);
 
@@ -96,7 +96,7 @@ frame_i(st_data_t key, st_data_t val, st_data_t arg)
     if (NIL_P(location))
 	location = rb_profile_frame_path(frame);
     if ((line = rb_profile_frame_first_lineno(frame)) != INT2FIX(0))
-	location = rb_sprintf("%"PRIsVALUE":%u", location, line);
+	location = rb_sprintf("%"PRIsVALUE":%u", location, FIX2INT(line));
 
     rb_hash_aset(details, ID2SYM(rb_intern("name")), name);
     rb_hash_aset(details, ID2SYM(rb_intern("location")), location);
