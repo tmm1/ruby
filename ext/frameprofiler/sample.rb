@@ -40,7 +40,7 @@ class ProfileResult
   end
 
   def print_text
-    printf "% 10s    (pct)  % 10s    (pct)     ISEQ\n" % ["TOTAL", "CALLER"]
+    printf "% 10s    (pct)  % 10s    (pct)     FRAME\n" % ["TOTAL", "SAMPLES"]
     frames.each do |frame, info|
       call, total = info.values_at(:samples, :total_samples)
       printf "% 10d % 8s  % 10d % 8s     %s\n", total, "(%2.1f%%)" % (total*100.0/overall_samples), call, "(%2.1f%%)" % (call*100.0/overall_samples), info[:name]
@@ -124,7 +124,7 @@ A.newobj (/Users/tmm1/code/ruby-gitsvn/ext/frameprofiler/sample.rb:83)
    52  (12.0% /  49.1%)  |    85  |     Object.new
                          |    86  |   end
 
-     TOTAL    (pct)      CALLER    (pct)     ISEQ
+     TOTAL    (pct)      CALLER    (pct)     FRAME
        361  (47.9%)         361  (47.9%)     A#pow
        203  (26.9%)         203  (26.9%)     A.newobj
        147  (19.5%)         147  (19.5%)     block in A#math
