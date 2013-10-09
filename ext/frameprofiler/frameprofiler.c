@@ -177,7 +177,7 @@ frameprofiler_run(VALUE self, VALUE type, VALUE usec)
 
     results = rb_hash_new();
     rb_hash_aset(results, ID2SYM(rb_intern("version")), DBL2NUM(1.0));
-    rb_hash_aset(results, ID2SYM(rb_intern("mode")), rb_sprintf("cpu(%"PRIsVALUE")", usec));
+    rb_hash_aset(results, ID2SYM(rb_intern("mode")), rb_sprintf("%"PRIsVALUE"(%"PRIsVALUE")", type, usec));
     rb_hash_aset(results, ID2SYM(rb_intern("samples")), SIZET2NUM(_results.overall_samples));
 
     frames = rb_hash_new();
