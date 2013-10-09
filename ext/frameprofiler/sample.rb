@@ -51,11 +51,11 @@ class ProfileResult
     name = /#{Regexp.escape name}/ unless Regexp === name
     frames.each do |frame, info|
       next unless info[:name] =~ name
-      printf "%s (%s)\n", info[:name], info[:location]
+      file, line = info.values_at(:file, :line)
 
-      file, line = info[:location].split(':')
       line = line.to_i - 1
       maxline = info[:lines] ? info[:lines].keys.max : line + 5
+      printf "%s (%s:%d)\n", info[:name], file, line
 
       source = File.readlines(file).each_with_index do |code, i|
         next unless (line..maxline).include?(i)

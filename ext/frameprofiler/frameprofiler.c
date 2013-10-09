@@ -123,21 +123,22 @@ frame_i(st_data_t key, st_data_t val, st_data_t arg)
     frame_data_t *frame_data = (frame_data_t *)val;
     VALUE results = (VALUE)arg;
     VALUE details = rb_hash_new();
-    VALUE name, location, edges, lines;
+    VALUE name, file, edges, lines;
     VALUE label, method_name;
     VALUE line;
 
     rb_hash_aset(results, rb_obj_id(frame), details);
 
     name = rb_profile_frame_full_label(frame);
-    location = rb_profile_frame_absolute_path(frame);
-    if (NIL_P(location))
-	location = rb_profile_frame_path(frame);
-    if ((line = rb_profile_frame_first_lineno(frame)) != INT2FIX(0))
-	location = rb_sprintf("%"PRIsVALUE":%u", location, FIX2INT(line));
-
     rb_hash_aset(details, ID2SYM(rb_intern("name")), name);
-    rb_hash_aset(details, ID2SYM(rb_intern("location")), location);
+
+    file = rb_profile_frame_absolute_path(frame);
+    if (NIL_P(file))
+	file = rb_profile_frame_path(frame);
+    rb_hash_aset(details, ID2SYM(rb_intern("file")), file);
+
+    if ((line = rb_profile_frame_first_lineno(frame)) != INT2FIX(0))
+	rb_hash_aset(details, ID2SYM(rb_intern("line")), line);
 
     rb_hash_aset(details, ID2SYM(rb_intern("total_samples")), SIZET2NUM(frame_data->total_samples));
     rb_hash_aset(details, ID2SYM(rb_intern("samples")), SIZET2NUM(frame_data->caller_samples));
