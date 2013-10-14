@@ -95,6 +95,10 @@ void rb_objspace_each_objects(
     int (*callback)(void *start, void *end, size_t stride, void *data),
     void *data);
 
+void rb_objspace_reachable_root_objects(
+    void (func)(const char *type, VALUE, void *),
+    void *data);
+
 RUBY_SYMBOL_EXPORT_END
 
 #endif /* RUBY_GC_H */

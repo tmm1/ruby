@@ -399,6 +399,7 @@ typedef struct rb_objspace {
     RVALUE *freelist;
 
     struct mark_func_data_struct {
+	const char *type;
 	void *data;
 	void (*mark_func)(VALUE v, void *data);
     } *mark_func_data;
@@ -3505,6 +3506,7 @@ tick(void)
 #define MAX_TICKS 0x100
 static tick_t mark_ticks[MAX_TICKS];
 static int mark_ticks_start_line;
+static tick_t start_tick;
 
 static void
 show_mark_ticks(void)
@@ -3520,14 +3522,13 @@ show_mark_ticks(void)
 
 #endif /* RGENGC_PRINT_TICK */
 
+static void gc_mark_roots(rb_objspace_t *, int);
+
 static void
 gc_marks_body(rb_objspace_t *objspace, int full_mark)
 {
-    struct gc_list *list;
-    rb_thread_t *th = GET_THREAD();
-
 #if RGENGC_PRINT_TICK
-    tick_t start_tick = tick();
+    start_tick = tick();
     if (mark_ticks_start_line == 0) {
 	mark_ticks_start_line = __LINE__;
 	atexit(show_mark_ticks);
@@ -3568,53 +3569,76 @@ gc_marks_body(rb_objspace_t *objspace, int full_mark)
     }
 #endif
 
+    /* mark roots */
+    gc_mark_roots(objspace, full_mark);
+
+    /* marking-loop */
+    MARK_CHECKPOINT;
+    gc_mark_stacked_objects(objspace);
+    MARK_CHECKPOINT;
+
+    /* cleanup */
+    rgengc_report(1, objspace, "gc_marks_body: end (%s)\n", full_mark ? "full" : "minor");
+}
+
+static void
+gc_mark_roots(rb_objspace_t *objspace, int full_mark)
+{
+    struct gc_list *list;
+    rb_thread_t *th = GET_THREAD();
+    const char **type = NULL;
+    if (objspace->mark_func_data)
+	type = &(objspace->mark_func_data->type);
+
     MARK_CHECKPOINT;
     SET_STACK_END;
+    if (type) *type = "vm";
     th->vm->self ? rb_gc_mark(th->vm->self) : rb_vm_mark(th->vm);
 
     MARK_CHECKPOINT;
+    if (type) *type = "finalizer_table";
     mark_tbl(objspace, finalizer_table);
 
     MARK_CHECKPOINT;
+    if (type) *type = "current_machine_context";
     mark_current_machine_context(objspace, th);
 
     MARK_CHECKPOINT;
+    if (type) *type = "symbols";
     rb_gc_mark_symbols(full_mark);
 
     MARK_CHECKPOINT;
+    if (type) *type = "encodings";
     rb_gc_mark_encodings();
 
     /* mark protected global variables */
     MARK_CHECKPOINT;
+    if (type) *type = "global_list";
     for (list = global_List; list; list = list->next) {
 	rb_gc_mark_maybe(*list->varptr);
     }
 
     MARK_CHECKPOINT;
+    if (type) *type = "end_proc";
     rb_mark_end_proc();
 
     MARK_CHECKPOINT;
+    if (type) *type = "global_tbl";
     rb_gc_mark_global_tbl();
 
     /* mark generic instance variables for special constants */
     MARK_CHECKPOINT;
+    if (type) *type = "generic_ivar_tbl";
     rb_mark_generic_ivar_tbl();
 
     MARK_CHECKPOINT;
+    if (type) *type = "parser";
     rb_gc_mark_parser();
 
     MARK_CHECKPOINT;
+    if (type) *type = "rb_gc_mark_unlinked_live_method_entries";
     rb_gc_mark_unlinked_live_method_entries(th->vm);
-
-    /* marking-loop */
-    MARK_CHECKPOINT;
-    gc_mark_stacked_objects(objspace);
-
-    MARK_CHECKPOINT;
 #undef MARK_CHECKPOINT
-
-    /* cleanup */
-    rgengc_report(1, objspace, "gc_marks_body: end (%s)\n", full_mark ? "full" : "minor");
 }
 
 #if RGENGC_CHECK_MODE >= 2
@@ -4699,6 +4723,37 @@ rb_objspace_reachable_objects_from(VALUE obj, void (func)(VALUE, void *), void *
 	gc_mark_children(objspace, obj);
 	objspace->mark_func_data = 0;
     }
+}
+
+struct root_objects_data {
+    void (*func)(const char *type, VALUE, void *);
+    void *data;
+};
+
+static void
+root_objects_from(VALUE obj, void *ptr)
+{
+    rb_objspace_t *objspace = &rb_objspace;
+    const struct root_objects_data *data = (struct root_objects_data *)ptr;
+    (*data->func)(objspace->mark_func_data->type, obj, data->data);
+}
+
+void
+rb_objspace_reachable_root_objects(void (func)(const char *type, VALUE, void *), void *passing_data)
+{
+    rb_objspace_t *objspace = &rb_objspace;
+    struct root_objects_data data;
+    struct mark_func_data_struct mfd;
+
+    data.func = func;
+    data.data = passing_data;
+
+    mfd.mark_func = root_objects_from;
+    mfd.data = &data;
+
+    objspace->mark_func_data = &mfd;
+    gc_mark_roots(objspace, TRUE);
+    objspace->mark_func_data = 0;
 }
 
 /*
