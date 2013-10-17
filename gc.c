@@ -4748,6 +4748,60 @@ rb_objspace_reachable_objects_from_root(void (func)(const char *category, VALUE,
 }
 
 /*
+ *  call-seq:
+ *     ObjectSpace.stat -> Hash
+ *
+ *  Returns a Hash containing information about ObjectSpace.
+ *
+ *  The hash includes information about internal statistics about ObjectSpace such as:
+ *
+ *	{
+ *	    :rvalue_bytes => 40,
+ *	    :bitmaps_bytes => 12936,
+ *	    :heap_total_bytes => 1256640,
+ *	    :heap_inuse_bytes => 831560
+ *	}
+ *
+ *  The contents of the hash are implementation specific and may be changed in
+ *  the future.
+ *
+ *  This method is only expected to work on C Ruby.
+ *
+ */
+
+static VALUE
+objspace_stat(int argc, VALUE *argv, VALUE self)
+{
+    rb_objspace_t *objspace = &rb_objspace;
+    VALUE hash;
+    static VALUE sym_rvalue_bytes, sym_heap_total_bytes, sym_heap_inuse_bytes, sym_bitmaps_bytes;
+    if (sym_rvalue_bytes == 0) {
+#define S(s) sym_##s = ID2SYM(rb_intern_const(#s))
+	S(rvalue_bytes);
+	S(heap_total_bytes);
+	S(heap_inuse_bytes);
+	S(bitmaps_bytes);
+#undef S
+    }
+
+    if (rb_scan_args(argc, argv, "01", &hash) == 1) {
+	if (!RB_TYPE_P(hash, T_HASH)) {
+	    rb_raise(rb_eTypeError, "non-hash given");
+	}
+    }
+
+    if (hash == Qnil) {
+        hash = rb_hash_new();
+    }
+
+    rb_hash_aset(hash, sym_rvalue_bytes, SIZET2NUM(sizeof(RVALUE)));
+    rb_hash_aset(hash, sym_bitmaps_bytes, SIZET2NUM(heap_length * HEAP_BITMAP_SIZE * HEAP_BITMAP_PLANES));
+    rb_hash_aset(hash, sym_heap_total_bytes, SIZET2NUM(heap_length * HEAP_OBJ_LIMIT * sizeof(RVALUE)));
+    rb_hash_aset(hash, sym_heap_inuse_bytes, SIZET2NUM(heap_limit * sizeof(RVALUE)));
+    return hash;
+}
+
+/*
   ------------------------ Extended allocator ------------------------
 */
 
@@ -6027,6 +6081,7 @@ Init_GC(void)
     rb_define_module_function(rb_mObjSpace, "undefine_finalizer", undefine_final, 1);
 
     rb_define_module_function(rb_mObjSpace, "_id2ref", id2ref, 1);
+    rb_define_module_function(rb_mObjSpace, "stat", objspace_stat, -1);
 
     nomem_error = rb_exc_new3(rb_eNoMemError,
 			      rb_obj_freeze(rb_str_new2("failed to allocate memory")));
