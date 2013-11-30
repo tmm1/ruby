@@ -1607,6 +1607,7 @@ rb_vm_mark(void *ptr)
 	RUBY_MARK_UNLESS_NULL(vm->top_self);
 	RUBY_MARK_UNLESS_NULL(vm->coverages);
 	RUBY_MARK_UNLESS_NULL(vm->defined_module_hash);
+	RUBY_MARK_UNLESS_NULL(vm->after_fork);
 	rb_gc_mark_locations(vm->special_exceptions, vm->special_exceptions + ruby_special_error_count);
 
 	if (vm->loading_table) {

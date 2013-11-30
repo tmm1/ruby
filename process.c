@@ -3687,6 +3687,28 @@ rb_f_abort(int argc, VALUE *argv)
     UNREACHABLE;
 }
 
+
+/*
+ *  call-seq:
+ *     after_fork{ puts "Forked #{Process.pid} from #{Process.ppid}" } -> proc
+ *
+ *  Run block in child process after the VM forks.
+ */
+
+VALUE
+rb_f_after_fork(VALUE self)
+{
+    VALUE proc;
+    VALUE *hooks = &(GET_THREAD()->vm->after_fork);
+
+    rb_need_block();
+    proc = rb_block_proc();
+    if (!RTEST(*hooks)) *hooks = rb_ary_new();
+    rb_ary_push(*hooks, proc);
+    return proc;
+}
+
+
 void
 rb_syswait(rb_pid_t pid)
 {
@@ -7302,6 +7324,7 @@ Init_process(void)
     rb_define_global_function("sleep", rb_f_sleep, -1);
     rb_define_global_function("exit", rb_f_exit, -1);
     rb_define_global_function("abort", rb_f_abort, -1);
+    rb_define_global_function("after_fork", rb_f_after_fork, 0);
 
     rb_mProcess = rb_define_module("Process");
 

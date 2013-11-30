@@ -3915,11 +3915,18 @@ terminate_atfork_i(st_data_t key, st_data_t val, st_data_t current_th)
 void
 rb_thread_atfork(void)
 {
+    VALUE hooks = GET_THREAD()->vm->after_fork;
+    long i;
+
     rb_thread_atfork_internal(terminate_atfork_i);
     GET_THREAD()->join_list = NULL;
 
     /* We don't want reproduce CVE-2003-0900. */
     rb_reset_random_seed();
+
+    if (RTEST(hooks))
+	for (i=0; i<RARRAY_LEN(hooks); i++)
+	    rb_proc_call(RARRAY_AREF(hooks, i), rb_ary_new());
 }
 
 static int

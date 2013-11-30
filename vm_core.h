@@ -412,7 +412,7 @@ typedef struct rb_vm_struct {
      * objects so do *NOT* mark this when you GC.
      */
     struct RArray at_exit;
-
+    VALUE after_fork;
     VALUE *defined_strings;
 
     /* params */

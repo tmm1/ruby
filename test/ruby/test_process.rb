@@ -686,6 +686,17 @@ class TestProcess < Test::Unit::TestCase
   rescue NotImplementedError
   end
 
+  def test_after_fork
+    assert_separately([], <<-END)
+    r, w = IO.pipe
+    after_fork{ w.write "Forked \#{Process.pid} from \#{Process.ppid}" }
+    Process.wait(child = fork{ exit })
+    w.close
+
+    assert_equal "Forked \#{child} from \#{Process.pid}", r.read
+    END
+  end
+
   def test_fd_inheritance
     skip "inheritance of fd other than stdin,stdout and stderr is not supported" if windows?
     with_pipe {|r, w|
