@@ -804,7 +804,6 @@ rb_include_class_new(VALUE module, VALUE super)
     RCLASS_CONST_TBL(klass) = RCLASS_CONST_TBL(module);
 
     RCLASS_M_TBL(OBJ_WB_UNPROTECT(klass)) = RCLASS_M_TBL(OBJ_WB_UNPROTECT(RCLASS_ORIGIN(module)));
-    rb_module_add_to_subclasses_list(module, klass);
 
     RCLASS_SET_SUPER(klass, super);
     if (RB_TYPE_P(module, T_ICLASS)) {
@@ -815,6 +814,11 @@ rb_include_class_new(VALUE module, VALUE super)
     }
     OBJ_INFECT(klass, module);
     OBJ_INFECT(klass, super);
+
+    if (BUILTIN_TYPE(module) == T_ICLASS)
+	rb_module_add_to_subclasses_list(RBASIC(module)->klass, klass);
+    else
+	rb_module_add_to_subclasses_list(module, klass);
 
     return (VALUE)klass;
 }
