@@ -219,6 +219,15 @@ rb_add_refined_method_entry(VALUE refined_class, ID mid)
     }
 }
 
+static void
+add_method_entry_write_barrier(VALUE klass, VALUE value)
+{
+    if (RB_TYPE_P(klass, T_MODULE)) {
+	// iterate iclasses and call write barrier for them too
+    }
+    OBJ_WRITTEN(klass, Qundef, value);
+}
+
 static rb_method_entry_t *
 rb_method_entry_make(VALUE klass, ID mid, rb_method_type_t type,
 		     rb_method_definition_t *def, rb_method_flag_t noex)
@@ -323,13 +332,13 @@ rb_method_entry_make(VALUE klass, ID mid, rb_method_type_t type,
 
 	switch(def->type) {
 	  case VM_METHOD_TYPE_ISEQ:
-	    OBJ_WRITTEN(klass, Qundef, def->body.iseq->self);
+	    add_method_entry_write_barrier(klass, def->body.iseq->self);
 	    break;
 	  case VM_METHOD_TYPE_IVAR:
-	    OBJ_WRITTEN(klass, Qundef, def->body.attr.location);
+	    add_method_entry_write_barrier(klass, def->body.attr.location);
 	    break;
 	  case VM_METHOD_TYPE_BMETHOD:
-	    OBJ_WRITTEN(klass, Qundef, def->body.proc);
+	    add_method_entry_write_barrier(klass, def->body.proc);
 	    break;
 	  default:;
 	    /* ignore */
