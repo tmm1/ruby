@@ -222,10 +222,15 @@ rb_add_refined_method_entry(VALUE refined_class, ID mid)
 static void
 add_method_entry_write_barrier(VALUE klass, VALUE value)
 {
+    OBJ_WRITTEN(klass, Qundef, value);
+
     if (RB_TYPE_P(klass, T_MODULE)) {
 	// iterate iclasses and call write barrier for them too
+	rb_subclass_entry_t *cur = RCLASS_EXT(klass)->subclasses;
+	for (; cur; cur = cur->next) {
+	    OBJ_WRITTEN(cur->klass, Qundef, value);
+	}
     }
-    OBJ_WRITTEN(klass, Qundef, value);
 }
 
 static rb_method_entry_t *
