@@ -2402,7 +2402,9 @@ obj_memsize_of(VALUE obj, int use_tdata)
 	break;
       case T_MODULE:
       case T_CLASS:
-	size += sizeof(struct method_table_wrapper);
+	if (RCLASS_M_TBL_WRAPPER(obj)) {
+	    size += sizeof(struct method_table_wrapper);
+	}
 	if (RCLASS_M_TBL(obj)) {
 	    size += st_memsize(RCLASS_M_TBL(obj));
 	}
