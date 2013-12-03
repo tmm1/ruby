@@ -156,7 +156,7 @@ class_alloc(VALUE flags, VALUE klass)
 {
     NEWOBJ_OF(obj, struct RClass, klass, (flags & T_MASK) | (RGENGC_WB_PROTECTED_CLASS ? FL_WB_PROTECTED : 0));
     obj->ptr = ALLOC(rb_classext_t);
-    obj->m_tbl = ALLOC(struct method_table);
+    obj->m_tbl_wrapper = ALLOC(struct method_table_wrapper);
     RCLASS_IV_TBL(obj) = 0;
     RCLASS_CONST_TBL(obj) = 0;
     RCLASS_M_TBL(obj) = 0;
@@ -355,7 +355,7 @@ rb_mod_init_copy(VALUE clone, VALUE orig)
     }
     if (RCLASS_M_TBL(orig)) {
 	if (RCLASS_M_TBL(clone)) {
-	    rb_free_m_table(RCLASS_M_TBL(clone));
+	    rb_free_m_tbl(RCLASS_M_TBL(clone));
 	}
 	RCLASS_M_TBL(clone) = st_init_numtable();
 	st_foreach(RCLASS_M_TBL(orig), clone_method_i, (st_data_t)clone);
