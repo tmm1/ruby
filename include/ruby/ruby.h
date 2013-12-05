@@ -1395,6 +1395,7 @@ void rb_global_variable(VALUE*);
 void rb_gc_register_mark_object(VALUE);
 void rb_gc_register_address(VALUE*);
 void rb_gc_unregister_address(VALUE*);
+size_t rb_gc_stat(VALUE);
 
 ID rb_intern(const char*);
 ID rb_intern2(const char*, long);

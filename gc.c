@@ -5059,6 +5059,8 @@ gc_count(VALUE self)
 /*
  *  call-seq:
  *     GC.stat -> Hash
+ *     GC.stat(hash) -> hash
+ *     GC.stat(:key) -> Numeric
  *
  *  Returns a Hash containing information about the GC.
  *
@@ -5095,10 +5097,8 @@ gc_count(VALUE self)
  */
 
 static VALUE
-gc_stat(int argc, VALUE *argv, VALUE self)
+gc_stat_internal(VALUE hash_or_sym, size_t *out)
 {
-    rb_objspace_t *objspace = &rb_objspace;
-    VALUE hash;
     static VALUE sym_count;
     static VALUE sym_heap_used, sym_heap_length, sym_heap_increment;
     static VALUE sym_heap_live_slot, sym_heap_free_slot, sym_heap_final_slot, sym_heap_swept_slot;
@@ -5119,6 +5119,16 @@ gc_stat(int argc, VALUE *argv, VALUE self)
     static VALUE sym_remembered_normal_object_count, sym_remembered_shady_object_count;
 #endif /* RGENGC_PROFILE */
 #endif /* USE_RGENGC */
+
+    rb_objspace_t *objspace = &rb_objspace;
+    VALUE hash = Qnil, key = Qnil;
+
+    if (RB_TYPE_P(hash_or_sym, T_HASH))
+	hash = hash_or_sym;
+    else if (SYMBOL_P(hash_or_sym) && out)
+	key = hash_or_sym;
+    else
+	rb_raise(rb_eArgError, "non-hash or symbol argument");
 
     if (sym_count == 0) {
 #define S(s) sym_##s = ID2SYM(rb_intern_const(#s))
@@ -5161,17 +5171,12 @@ gc_stat(int argc, VALUE *argv, VALUE self)
 #undef S
     }
 
-    if (rb_scan_args(argc, argv, "01", &hash) == 1) {
-	if (!RB_TYPE_P(hash, T_HASH)) {
-	    rb_raise(rb_eTypeError, "non-hash given");
-	}
-    }
+#define SET(name, attr) \
+    if (key == sym_##name) \
+	return (*out = attr, Qnil); \
+    else if (hash != Qnil) \
+	rb_hash_aset(hash, sym_##name, SIZET2NUM(attr));
 
-    if (hash == Qnil) {
-        hash = rb_hash_new();
-    }
-
-#define SET(name, attr) rb_hash_aset(hash, sym_##name, SIZET2NUM(attr))
     SET(count, objspace->profile.count);
 
     /* implementation dependent counters */
@@ -5211,8 +5216,15 @@ gc_stat(int argc, VALUE *argv, VALUE self)
 #endif
     SET(remembered_normal_object_count, objspace->profile.remembered_normal_object_count);
     SET(remembered_shady_object_count, objspace->profile.remembered_shady_object_count);
-#if RGENGC_PROFILE >= 2
-    {
+#endif /* RGENGC_PROFILE */
+#endif /* USE_RGENGC */
+#undef SET
+
+    if (key != Qnil) /* matched key should return above */
+	rb_raise(rb_eArgError, "unknown key: %s", RSTRING_PTR(rb_id2str(SYM2ID(key))));
+
+#if defined(RGENGC_PROFILE) && RGENGC_PROFILE >= 2
+    if (hash != Qnil) {
 	gc_count_add_each_types(hash, "generated_normal_object_count_types", objspace->profile.generated_normal_object_count_types);
 	gc_count_add_each_types(hash, "generated_shady_object_count_types", objspace->profile.generated_shady_object_count_types);
 	gc_count_add_each_types(hash, "shade_operation_count_types", objspace->profile.shade_operation_count_types);
@@ -5224,10 +5236,38 @@ gc_stat(int argc, VALUE *argv, VALUE self)
 	gc_count_add_each_types(hash, "remembered_shady_object_count_types", objspace->profile.remembered_shady_object_count_types);
     }
 #endif
-#endif /* RGENGC_PROFILE */
-#endif /* USE_RGENGC */
-#undef SET
+
     return hash;
+}
+
+static VALUE
+gc_stat(int argc, VALUE *argv, VALUE self)
+{
+    VALUE arg = Qnil;
+
+    if (rb_scan_args(argc, argv, "01", &arg) == 1) {
+	if (SYMBOL_P(arg)) {
+	    size_t value = 0;
+	    gc_stat_internal(arg, &value);
+	    return SIZET2NUM(value);
+	} else if (!RB_TYPE_P(arg, T_HASH)) {
+	    rb_raise(rb_eTypeError, "non-hash given");
+	}
+    }
+
+    if (arg == Qnil) {
+        arg = rb_hash_new();
+    }
+    gc_stat_internal(arg, 0);
+    return arg;
+}
+
+size_t
+rb_gc_stat(VALUE key)
+{
+    size_t value = 0;
+    gc_stat_internal(key, &value);
+    return value;
 }
 
 /*
