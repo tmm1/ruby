@@ -5290,6 +5290,24 @@ iseq_compile_each(rb_iseq_t *iseq, LINK_ANCHOR *ret, NODE * node, int poped)
 	break;
       }
       case NODE_ATTRASGN:{
+	if (node->nd_mid == idASET &&
+	    node->nd_recv != (NODE *)1 &&
+	    node->nd_args &&
+	    nd_type(node->nd_args) == NODE_ARRAY &&
+	    node->nd_args->nd_alen == 2 &&
+	    nd_type(node->nd_args->nd_head) == NODE_STR)
+	{
+	    COMPILE(ret, "recv", node->nd_recv);
+	    COMPILE(ret, "value", node->nd_args->nd_next->nd_head);
+	    ADD_INSN2(ret, line, opt_aset_str,
+		      new_callinfo(iseq, idASET, 2, 0, 0),
+		      rb_fstring(node->nd_args->nd_head->nd_lit));
+	    if (poped) {
+		ADD_INSN(ret, line, pop);
+	    }
+	    break;
+	}
+
 	DECL_ANCHOR(recv);
 	DECL_ANCHOR(args);
 	VALUE flag = 0;
