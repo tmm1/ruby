@@ -4023,6 +4023,21 @@ iseq_compile_each(rb_iseq_t *iseq, LINK_ANCHOR *ret, NODE * node, int poped)
 	    argc = setup_args(iseq, args, node->nd_args->nd_head, &flag);
 	    ADD_SEQ(ret, args);
 	}
+
+	if (id == idPLUS && argc == INT2FIX(1) && nd_type(node->nd_args->nd_body) == NODE_LIT && boff == 0 && flag == 0) {
+	    /*
+	       a[x] += 1
+	    */
+	    COMPILE(ret, "incr", node->nd_args->nd_body);
+	    ADD_INSN3(ret, line, opt_aref_op_aset,
+		      new_callinfo(iseq, idAREF, 1, 0, 0),
+		      new_callinfo(iseq, id, 1, 0, 0),
+		      new_callinfo(iseq, idASET, 2, 0, 0));
+	    if (!poped)
+		ADD_INSN(ret, line, pop);
+	    break;
+	}
+
 	ADD_INSN1(ret, line, dupn, FIXNUM_INC(argc, 1 + boff));
 	ADD_SEND_R(ret, line, ID2SYM(idAREF), argc, Qfalse, LONG2FIX(flag));
 

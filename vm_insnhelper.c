@@ -850,6 +850,33 @@ check_cfunc(const rb_method_entry_t *me, VALUE (*func)())
     }
 }
 
+static int
+opt_aref_op_aset_i(st_data_t *key, st_data_t *value, st_data_t arg, int existing)
+{
+    struct opt_aref_op_aset_arg *args = (struct opt_aref_op_aset_arg *)arg;
+    rb_thread_t *th = args->th;
+    rb_control_frame_t *reg_cfp = args->reg_cfp;
+    CALL_INFO ci = args->ci;
+    VALUE recv = args->recv;
+    VALUE val;
+
+    if (!existing) {
+	/* TODO: iter check */
+	VALUE def = hash_default_value(recv, (VALUE)*key);
+	if (!RTEST(def)) return ST_STOP;
+	val = def;
+    } else {
+	val = (VALUE)*value;
+    }
+
+    PUSH(val);
+    PUSH(args->incr);
+    CALL_SIMPLE_METHOD_RAW(val, {
+	*value = args->ret = v;
+    });
+    return ST_CONTINUE;
+}
+
 static
 #ifndef NO_BIG_INLINE
 inline

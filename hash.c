@@ -636,7 +636,7 @@ rb_hash_rehash(VALUE hash)
     return hash;
 }
 
-static VALUE
+VALUE
 hash_default_value(VALUE hash, VALUE key)
 {
     if (rb_method_basic_definition_p(CLASS_OF(hash), id_default)) {

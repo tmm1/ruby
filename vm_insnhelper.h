@@ -192,15 +192,22 @@ enum vm_regan_acttype {
   } \
 } while (0)
 
-#define CALL_METHOD(ci) do { \
+#define CALL_METHOD_RAW(ci, expr) do { \
     VALUE v = (*(ci)->call)(th, GET_CFP(), (ci)); \
-    if (v == Qundef) { \
-	RESTORE_REGS(); \
-	NEXT_INSN(); \
-    } \
-    else { \
-	val = v; \
-    } \
+    expr; \
+} while (0)
+
+
+#define CALL_METHOD(ci) do { \
+    CALL_METHOD_RAW(ci, { \
+	if (v == Qundef) { \
+	    RESTORE_REGS(); \
+	    NEXT_INSN(); \
+	} \
+	else { \
+	    val = v; \
+	} \
+    }); \
 } while (0)
 
 /* set fastpath when cached method is *NOT* protected
@@ -260,6 +267,12 @@ enum vm_regan_acttype {
     CALL_METHOD(ci); \
 } while (0)
 
+#define CALL_SIMPLE_METHOD_RAW(recv_, expr) do { \
+    ci->blockptr = 0; ci->argc = ci->orig_argc; \
+    vm_search_method(ci, ci->recv = (recv_)); \
+    CALL_METHOD_RAW(ci, expr); \
+} while(0)
+
 #define NEXT_CLASS_SERIAL() (++ruby_vm_class_serial)
 #define GET_GLOBAL_METHOD_STATE() (ruby_vm_global_method_state)
 #define INC_GLOBAL_METHOD_STATE() (++ruby_vm_global_method_state)
@@ -268,6 +281,13 @@ enum vm_regan_acttype {
 
 static VALUE make_no_method_exception(VALUE exc, const char *format,
 				      VALUE obj, int argc, const VALUE *argv);
-
+struct opt_aref_op_aset_arg {
+    CALL_INFO ci;
+    rb_thread_t *th;
+    rb_control_frame_t *reg_cfp;
+    VALUE recv;
+    VALUE incr;
+    VALUE ret;
+};
 
 #endif /* RUBY_INSNHELPER_H */

@@ -1903,6 +1903,65 @@ opt_aset
 
 /**
   @c optimize
+  @e recv[key] += incr
+  @j 最適化された recv[key] += incr。
+ */
+DEFINE_INSN
+opt_aref_op_aset
+(CALL_INFO ci_aref, CALL_INFO ci_op, CALL_INFO ci_aset)
+(VALUE recv, VALUE key, VALUE incr)
+(VALUE val)
+{
+    if (!SPECIAL_CONST_P(recv)) {
+	if (RBASIC_CLASS(recv) == rb_cHash && BASIC_OP_UNREDEFINED_P(BOP_AREF, HASH_REDEFINED_OP_FLAG)
+	                                   && BASIC_OP_UNREDEFINED_P(BOP_ASET, HASH_REDEFINED_OP_FLAG)
+					   && FIXNUM_P(incr)) {
+
+	    struct opt_aref_op_aset_arg arg = {
+		.ci = ci_op,
+		.recv = recv,
+		.incr = incr,
+		.th = th,
+		.reg_cfp = reg_cfp
+	    };
+	    st_update(RHASH(recv)->ntbl, (st_data_t)key, opt_aref_op_aset_i, (st_data_t)&arg);
+	    val = arg.ret;
+	    POPN(1);
+	    PUSH(val);
+	}
+	else {
+	    goto INSN_LABEL(normal_dispatch);
+	}
+    }
+    else {
+      CALL_INFO ci;
+      VALUE ret;
+
+      INSN_LABEL(normal_dispatch):
+	ci = ci_aref;
+	PUSH(recv);
+	PUSH(key);
+	CALL_SIMPLE_METHOD(recv);
+
+	ci = ci_op;
+	PUSH(val);
+	PUSH(incr);
+	CALL_SIMPLE_METHOD(val);
+	ret = val;
+
+	ci = ci_aset;
+	PUSH(recv);
+	PUSH(key);
+	PUSH(val);
+	CALL_SIMPLE_METHOD(recv);
+
+	POPN(1);
+	PUSH(ret);
+    }
+}
+
+/**
+  @c optimize
   @e optimized length
   @j 最適化された recv.length()。
  */
